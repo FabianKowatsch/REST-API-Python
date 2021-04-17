@@ -26,6 +26,13 @@ food_put_args.add_argument("date_added", type=str,
 food_put_args.add_argument("date_expires", type=str,
                            help="estimated expire date of the food")
 
+
+food_patch_args = reqparse.RequestParser()
+food_patch_args.add_argument("date_added", type=str,
+                             help="date of the added food")
+food_patch_args.add_argument("date_expires", type=str,
+                             help="estimated expire date of the food")
+
 resource_fields = {
     'id': fields.Integer,
     'name': fields.String,
@@ -37,13 +44,16 @@ resource_fields = {
 class Food(Resource):
     @marshal_with(resource_fields)
     def get(self, food_id):
-        # abort_food_id_not_available(food_id)
-        result = FoodModel.query.filter_by(id=food_id)
-        return result
+        result = FoodModel.query.filter_by(id=food_id).first()
+        if not result:
+            abort(404, message=f"food_id: {food_id} doesnt exist")
+        return result, 200
 
     @marshal_with(resource_fields)
     def put(self, food_id):
-        # abort_food_id_exists(food_id)
+        result = FoodModel.query.filter_by(id=food_id).first()
+        if result:
+            abort(409, message=f"food_id {food_id} already exists")
         args = food_put_args.parse_args()
         food = FoodModel(
             id=food_id, name=args['name'], date_added=args['date_added'], date_expires=args['date_expires'])
@@ -51,20 +61,26 @@ class Food(Resource):
         db.session.commit()
         return food, 201
 
-    # def delete(self, food_id):
-    #     abort_food_id_not_available(food_id)
-    #     del food[food_id]
-    #     return {"deleted": str(food_id)}, 204
+    @marshal_with(resource_fields)
+    def patch(self, food_id):
+        result = FoodModel.query.filter_by(id=food_id).first()
+        if not result:
+            abort(404, message=f"food_id: {food_id} doesnt exist")
+        args = food_patch_args.parse_args()
+        if args['date_added']:
+            result.name = args['date_added']
+        if args['date_expires']:
+            result.name = args['date_expires']
+        return result, 200
 
-
-# def abort_food_id_not_available(food_id):
-#     if food_id not in food:
-#         abort(404, message="food_id does not exist")
-
-
-# def abort_food_id_exists(food_id):
-#     if food_id in food:
-#         abort(409, message="food_id already exists")
+    @marshal_with(resource_fields)
+    def delete(self, food_id):
+        result = FoodModel.query.filter_by(id=food_id).first()
+        if not result:
+            abort(404, message=f"food_id: {food_id} doesnt exist")
+        db.session.delete(result)
+        db.session.commit()
+        return '', 204
 
 
 api.add_resource(Food, "/food/<int:food_id>")
