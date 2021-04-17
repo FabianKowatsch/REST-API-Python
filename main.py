@@ -1,5 +1,5 @@
 from flask import Flask
-from flask_restful import Api, Resource, reqparse, abort
+from flask_restful import Api, Resource, reqparse, abort, fields, marshal_with
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
@@ -15,7 +15,7 @@ class FoodModel(db.Model):
     date_expires = db.Column(db.String(100), nullable=True)
 
     def __repr__(self):
-        return f"Food(name={name}, date_added={date_added}, date_expires={date_expires}"
+        return f"Food(id={self.id}, name={self.name}, date_added={self.date_added}, date_expires={self.date_expires})"
 
 
 food_put_args = reqparse.RequestParser()
@@ -26,34 +26,45 @@ food_put_args.add_argument("date_added", type=str,
 food_put_args.add_argument("date_expires", type=str,
                            help="estimated expire date of the food")
 
-food = {}
+resource_fields = {
+    'id': fields.Integer,
+    'name': fields.String,
+    'date_added': fields.String,
+    'date_expires': fields.String
+}
 
 
 class Food(Resource):
+    @marshal_with(resource_fields)
     def get(self, food_id):
-        abort_food_id_not_available(food_id)
-        return food[food_id]
+        # abort_food_id_not_available(food_id)
+        result = FoodModel.query.filter_by(id=food_id)
+        return result
 
+    @marshal_with(resource_fields)
     def put(self, food_id):
-        abort_food_id_exists(food_id)
+        # abort_food_id_exists(food_id)
         args = food_put_args.parse_args()
-        food[food_id] = args
-        return food[food_id], 201
+        food = FoodModel(
+            id=food_id, name=args['name'], date_added=args['date_added'], date_expires=args['date_expires'])
+        db.session.add(food)
+        db.session.commit()
+        return food, 201
 
-    def delete(self, food_id):
-        abort_food_id_not_available(food_id)
-        del food[food_id]
-        return {"deleted": str(food_id)}, 204
-
-
-def abort_food_id_not_available(food_id):
-    if food_id not in food:
-        abort(404, message="food_id does not exist")
+    # def delete(self, food_id):
+    #     abort_food_id_not_available(food_id)
+    #     del food[food_id]
+    #     return {"deleted": str(food_id)}, 204
 
 
-def abort_food_id_exists(food_id):
-    if food_id in food:
-        abort(409, message="food_id already exists")
+# def abort_food_id_not_available(food_id):
+#     if food_id not in food:
+#         abort(404, message="food_id does not exist")
+
+
+# def abort_food_id_exists(food_id):
+#     if food_id in food:
+#         abort(409, message="food_id already exists")
 
 
 api.add_resource(Food, "/food/<int:food_id>")

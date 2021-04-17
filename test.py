@@ -9,7 +9,7 @@ data = [{"name": "essen1", "date_added": "10.01.21"},
 
 for i in range(len(data)):
     response = requests.put(
-        BASE + "/food/" + str(i), data[i])
+        BASE + "/food/" + str(i+5), data[i])
     print(response.json())
 
 response = requests.delete(BASE + "/food/2")
