@@ -1,19 +1,27 @@
 from flask import Flask
-from flask_restful import Api, Resource
+from flask_restful import Api, Resource, reqparse
 
 app = Flask(__name__)
 
 api = Api(app)
-food = {"Lu": {"age": 5, "gender": "male"},
-        "Lou": {"age": 3, "gender": "female"}}
+
+food_put_args = reqparse.RequestParser()
+food_put_args.add_argument("name", type=str, help="name of the food")
+food_put_args.add_argument("date_added", type=str,
+                           help="date of the added food")
+food_put_args.add_argument("date_added", type=str,
+                           help="date of the added food")
+
+food = {}
 
 
 class Food(Resource):
     def get(self, name):
         return food[name]
 
-    def post(self):
-        return {"data": "Posted"}
+    def put(self, name):
+        args = food_put_args.parse_args()
+        return {name: args}
 
 
 api.add_resource(Food, "/cats/<string:name>")
